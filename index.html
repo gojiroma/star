@@ -9,60 +9,63 @@
         ::-webkit-scrollbar {
             display: none;
         }
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f5f5f5;
+    position: relative;
+    padding: 0 10px; /* スマホ表示時の左右余白 */
+}
 
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f5f5f5;
-            position: relative;
-        }
+.container {
+    text-align: center;
+    width: 100%;
+    max-width: 500px; /* PC表示時の最大幅 */
+}
 
-        .container {
-            text-align: center;
-            position: relative;
-        }
+input {
+    padding: 10px;
+    width: 100%;
+    max-width: 400px; /* PC表示時の最大幅 */
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* パディングやボーダーを幅に含める */
+}
 
-        input {
-            padding: 10px;
-            width: 400px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+.suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    width: 100%; /* スマホ表示時の幅調整 */
+}
 
-        .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #ccc;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
+.suggestion-item {
+    padding: 8px 10px;
+    cursor: pointer;
+}
 
-        .suggestion-item {
-            padding: 8px 10px;
-            cursor: pointer;
-        }
+.suggestion-item:hover {
+    background-color: #f0f0f0;
+}
 
-        .suggestion-item:hover {
-            background-color: #f0f0f0;
-        }
-
-        .message {
-            margin-top: 10px;
-            color: #666;
-        }
-    </style>
+.message {
+    margin-top: 10px;
+    color: #666;
+}    </style>
 </head>
 
 <body>

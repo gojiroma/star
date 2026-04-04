@@ -204,6 +204,30 @@
                 }
             };
 
+            // 入力が落ち着いたら自動で検索・遷移
+            let typingTimer;
+            const doneTypingInterval = 1000; // 1秒
+
+            input.addEventListener('input', () => {
+                showSuggestions();
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    const query = input.value.trim();
+                    if (query) {
+                        const matches = defaultBookmarks.filter(bookmark =>
+                            bookmark.toLowerCase().includes(query.toLowerCase())
+                        );
+
+                        if (matches.length === 1) {
+                            const url = matches[0].startsWith('http') ? matches[0] : `https://${matches[0]}`;
+                            window.location.href = url;
+                        } else if (matches.length === 0) {
+                            window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I'm+Feeling+Lucky`;
+                        }
+                    }
+                }, doneTypingInterval);
+            });
+
             // Enterキーを押したときの挙動
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
@@ -212,9 +236,6 @@
                     }
                 }
             });
-
-            // 入力中にサジェスチョンを表示
-            input.addEventListener('input', showSuggestions);
 
             // ページ外をクリックした際にサジェスチョンを非表示
             document.addEventListener('click', function (e) {
@@ -225,5 +246,4 @@
         });
     </script>
 </body>
-
 </html>

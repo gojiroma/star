@@ -78,9 +78,6 @@
             const suggestions = document.getElementById('suggestions');
             const message = document.getElementById('message');
 
-            // ページロード時にinputにフォーカス
-            input.focus();
-
             // パーセントデコード関数
             function decodePercentEncoding(str) {
                 try {
@@ -133,6 +130,10 @@
 
             // 最新コミットからURLリストを読み込む
             defaultBookmarks = await fetchUrlsFromLatestCommit();
+
+            // 重複を解消
+            defaultBookmarks = [...new Set(defaultBookmarks)];
+
             if (defaultBookmarks.length > 0) {
                 message.textContent = `${defaultBookmarks.length}件のブックマークを読み込みました。`;
             } else {
@@ -243,6 +244,9 @@
                     suggestions.style.display = 'none';
                 }
             });
+
+            // ページロード時にinputにフォーカス
+            input.focus();
         });
     </script>
 </body>

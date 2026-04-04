@@ -80,52 +80,20 @@
             // ページロード時にinputにフォーカス
             input.focus();
 
-            // 決めうちのURLリスト
-            const defaultBookmarks = [
-                "https://ahamo.com/myportal/home/auth/",
-                "https://app.raindrop.io/my/0",
-                "https://blank.poet.blue/",
-                "https://calendar.google.com/calendar/u/0/r",
-                "https://care.linemo.jp/luc/d/top",
-                "https://chat.mistral.ai/chat",
-                "https://chromewebstore.google.com/",
-                "https://claude.ai/new",
-                "https://gemini.google.com/app?hl=ja",
-                "https://grok.com/",
-                "https://ilisod006.apsel.jp/fukaya-library/advanced-search",
-                "https://keep.google.com/",
-                "https://manus.im/app",
-                "https://messages.google.com/web/conversations",
-                "https://poet.blue/",
-                "https://poet.blue/write.html",
-                "https://radiko.jp/",
-                "https://search.yahoo.co.jp/realtime",
-                "https://tools.poet.blue/local-microblog.html",
-                "https://tools.poet.blue/TDFK%EF%BC%BFX.html",
-                "https://transit.yahoo.co.jp/",
-                "https://vercel.com/gojiplace",
-                "https://github.com/gojiroma/star/edit/main/index.html",
-                "https://www.eposcard.co.jp/memberservice/pc/webservicetop/web_service_top_preload.do",
-                "https://www.google.com/maps/@36.0914853,135.286869,6.23z?entry=ttu&g_ep=EgoyMDI2MDQwMS4wIKXMDSoASAFQAw%3D%3D",
-                "https://www.nuro.jp/app/mypage/top/",
-                "https://www.youtube.com/",
-                "https://www.lib.pref.saitama.jp/",
-                "https://www.google.com/alerts",
-                "https://b.hatena.ne.jp/",
-                "https://scrapbox.io/chrome-extensions/",
-                "https://idy.vercel.app/g",
-                "https://idy.vercel.app/w",
-                "https://idy.vercel.app/j",
-                "https://idy.vercel.app/daigaku",
-                "https://sai2.info/",
-                "https://kagohara.net/",
-                "https://poet.blue/write.html",
-                "https://buttaiwan.github.io/writemyfont/ja.html",
-                "https://wmf.poet.blue/pages/ja.html",
-                "https://bunfree.net/",
-                "https://app.raindrop.io/my/0",
-                "https://github.com/new"
-            ];
+            // urls.txtからURLリストを読み込む
+            let defaultBookmarks = [];
+
+            fetch('urls.txt')
+                .then(response => response.text())
+                .then(text => {
+                    // 改行区切りでURLを分割
+                    defaultBookmarks = text.split('\n').filter(url => url.trim() !== '');
+                    message.textContent = `${defaultBookmarks.length}件のブックマークを読み込みました。`;
+                })
+                .catch(error => {
+                    message.textContent = 'URLリストの読み込みに失敗しました。';
+                    console.error('Error:', error);
+                });
 
             // 入力内容を追加する
             const addBookmark = () => {

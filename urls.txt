@@ -41,3 +41,4 @@ https://www.google.com/maps/@36.0914853,135.286869,6.23z?entry=ttu&g_ep=EgoyMDI2
 https://www.lib.pref.saitama.jp/
 https://www.nuro.jp/app/mypage/top/
 https://www.youtube.com/
+https://github.com/settings/personal-access-tokens?pat

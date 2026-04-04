@@ -1,6 +1,5 @@
 https://ahamo.com/myportal/home/auth/
 https://app.raindrop.io/my/0
-https://app.raindrop.io/my/0
 https://b.hatena.ne.jp/
 https://blank.poet.blue/
 https://bunfree.net/
@@ -24,7 +23,6 @@ https://keep.google.com/
 https://manus.im/app
 https://messages.google.com/web/conversations
 https://poet.blue/
-https://poet.blue/write.html
 https://poet.blue/write.html
 https://radiko.jp/
 https://sai2.info/

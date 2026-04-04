@@ -144,7 +144,7 @@
                 const fetchedBookmarks = await fetchUrlsFromLatestCommit();
                 if (fetchedBookmarks.length > 0) {
                     // 重複を解消して更新
-                    defaultBookmarks = [...new Set([...defaultBookmarks, ...fetchedBookmarks])];
+                    defaultBookmarks = [...new Set([...fetchedBookmarks])];
                     saveBookmarksToLocalStorage(defaultBookmarks);
                     message.textContent = `${defaultBookmarks.length}件のブックマークを更新しました。`;
                 } else {
@@ -152,12 +152,8 @@
                 }
             }
 
-            // 初回読み込み時、LocalStorageにデータがなければGitHubから取得
-            if (defaultBookmarks.length === 0) {
-                await updateBookmarksFromGitHub();
-            } else {
-                message.textContent = `${defaultBookmarks.length}件のブックマークを読み込みました。`;
-            }
+            // ページロード時にGitHubから最新データを取得
+            await updateBookmarksFromGitHub();
 
             // 入力内容を追加する
             const addBookmark = () => {

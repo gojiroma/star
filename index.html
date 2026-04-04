@@ -87,6 +87,17 @@
                 }
             }
 
+            // LocalStorageからブックマークを読み込む
+            function loadBookmarksFromLocalStorage() {
+                const storedBookmarks = localStorage.getItem('bookmarks');
+                return storedBookmarks ? JSON.parse(storedBookmarks) : [];
+            }
+
+            // LocalStorageにブックマークを保存
+            function saveBookmarksToLocalStorage(bookmarks) {
+                localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+            }
+
             // 最新コミットのハッシュを取得
             async function fetchLatestCommitHash() {
                 const apiUrl = 'https://api.github.com/repos/gojiroma/bookmarks/commits?path=urls.txt&per_page=1';
@@ -126,18 +137,26 @@
             }
 
             // ブックマークリストを初期化
-            let defaultBookmarks = [];
+            let defaultBookmarks = loadBookmarksFromLocalStorage();
 
-            // 最新コミットからURLリストを読み込む
-            defaultBookmarks = await fetchUrlsFromLatestCommit();
+            // GitHubから最新のURLリストを取得して更新
+            async function updateBookmarksFromGitHub() {
+                const fetchedBookmarks = await fetchUrlsFromLatestCommit();
+                if (fetchedBookmarks.length > 0) {
+                    // 重複を解消して更新
+                    defaultBookmarks = [...new Set([...defaultBookmarks, ...fetchedBookmarks])];
+                    saveBookmarksToLocalStorage(defaultBookmarks);
+                    message.textContent = `${defaultBookmarks.length}件のブックマークを更新しました。`;
+                } else {
+                    message.textContent = 'GitHubからの更新に失敗しました。';
+                }
+            }
 
-            // 重複を解消
-            defaultBookmarks = [...new Set(defaultBookmarks)];
-
-            if (defaultBookmarks.length > 0) {
-                message.textContent = `${defaultBookmarks.length}件のブックマークを読み込みました。`;
+            // 初回読み込み時、LocalStorageにデータがなければGitHubから取得
+            if (defaultBookmarks.length === 0) {
+                await updateBookmarksFromGitHub();
             } else {
-                message.textContent = 'URLリストの読み込みに失敗しました。';
+                message.textContent = `${defaultBookmarks.length}件のブックマークを読み込みました。`;
             }
 
             // 入力内容を追加する
@@ -151,6 +170,7 @@
                 }
 
                 defaultBookmarks.push(text);
+                saveBookmarksToLocalStorage(defaultBookmarks);
                 input.value = '';
                 message.textContent = 'ブックマークを追加しました。';
             };

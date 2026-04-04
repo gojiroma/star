@@ -169,7 +169,8 @@
                 } else if (matches.length > 1) {
                     message.textContent = `${matches.length}件ヒットしました。`;
                 } else {
-                    message.textContent = '該当するブックマークが見つかりません。';
+                    // 該当なしの場合、GoogleのI'm Feeling Luckyに遷移
+                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I'm+Feeling+Lucky`;
                 }
             };
 
@@ -198,12 +199,6 @@
                         suggestions.appendChild(div);
                     });
                     suggestions.style.display = 'block';
-
-                    // 部分一致が1件になったらすぐに遷移
-                    if (matches.length === 1) {
-                        const url = matches[0].startsWith('http') ? matches[0] : `https://${matches[0]}`;
-                        window.location.href = url;
-                    }
                 } else {
                     suggestions.style.display = 'none';
                 }

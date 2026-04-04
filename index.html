@@ -86,8 +86,8 @@
             fetch('https://raw.githubusercontent.com/gojiroma/bookmarks/refs/heads/main/urls.txt')
                 .then(response => response.text())
                 .then(text => {
-                    // 改行区切りでURLを分割
-                    defaultBookmarks = text.split('\n').filter(url => url.trim() !== '');
+                    // 改行区切りでURLを分割し、重複を除く
+                    defaultBookmarks = [...new Set(text.split('\n').filter(url => url.trim() !== ''))];
                     message.textContent = `${defaultBookmarks.length}件のブックマークを読み込みました。`;
                 })
                 .catch(error => {

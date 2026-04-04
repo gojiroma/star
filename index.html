@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>決まり字ブックマーク</title>
+    <style>
+        ::-webkit-scrollbar{
+            display: none;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+            position: relative;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+        }
+
+        input {
+            padding: 10px;
+            width: 400px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .message {
+            margin-top: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <input type="text" id="bookmarkInput" placeholder="URLまたはキーワードを入力" autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
+        <p class="message" id="message"></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('bookmarkInput');
+            const suggestions = document.getElementById('suggestions');
+            const message = document.getElementById('message');
+
+            // ページロード時にinputにフォーカス
+            input.focus();
+
+            // 決めうちのURLリスト
+            const defaultBookmarks = [
+                "https://ahamo.com/myportal/home/auth/",
+                "https://app.raindrop.io/my/0",
+                "https://blank.poet.blue/",
+                "https://calendar.google.com/calendar/u/0/r",
+                "https://care.linemo.jp/luc/d/top",
+                "https://chat.mistral.ai/chat",
+                "https://chromewebstore.google.com/",
+                "https://claude.ai/new",
+                "https://gemini.google.com/app?hl=ja",
+                "https://grok.com/",
+                "https://ilisod006.apsel.jp/fukaya-library/advanced-search",
+                "https://keep.google.com/",
+                "https://manus.im/app",
+                "https://messages.google.com/web/conversations",
+                "https://poet.blue/",
+                "https://poet.blue/write.html",
+                "https://radiko.jp/",
+                "https://search.yahoo.co.jp/realtime",
+                "https://tools.poet.blue/local-microblog.html",
+                "https://tools.poet.blue/TDFK%EF%BC%BFX.html",
+                "https://transit.yahoo.co.jp/",
+                "https://vercel.com/gojiplace",
+                "https://www.eposcard.co.jp/memberservice/pc/webservicetop/web_service_top_preload.do",
+                "https://www.google.com/maps/@36.0914853,135.286869,6.23z?entry=ttu&g_ep=EgoyMDI2MDQwMS4wIKXMDSoASAFQAw%3D%3D",
+                "https://www.nuro.jp/app/mypage/top/",
+                "https://www.youtube.com/",
+                "https://www.lib.pref.saitama.jp/",
+                "https://www.google.com/alerts",
+                "https://b.hatena.ne.jp/",
+                "https://scrapbox.io/chrome-extensions/",
+                "https://idy.vercel.app/g",
+                "https://idy.vercel.app/w",
+                "https://idy.vercel.app/j",
+                "https://idy.vercel.app/daigaku",
+                "https://sai2.info/",
+                "https://kagohara.net/",
+                "https://poet.blue/write.html",
+                "https://buttaiwan.github.io/writemyfont/ja.html",
+                "https://wmf.poet.blue/pages/ja.html",
+                "https://bunfree.net/",
+                "https://app.raindrop.io/my/0",
+                "https://github.com/new"
+            ];
+
+            // 入力内容を追加する
+            const addBookmark = () => {
+                const text = input.value.trim();
+                if (!text) return;
+
+                if (defaultBookmarks.includes(text)) {
+                    message.textContent = 'このブックマークは既に存在します。';
+                    return;
+                }
+
+                defaultBookmarks.push(text);
+                input.value = '';
+                message.textContent = 'ブックマークを追加しました。';
+            };
+
+            // 部分一致で検索し、1件だけに絞れたらそのURLに移動
+            const searchAndNavigate = () => {
+                const query = input.value.trim();
+                if (!query) return;
+
+                const matches = defaultBookmarks.filter(bookmark =>
+                    bookmark.toLowerCase().includes(query.toLowerCase())
+                );
+
+                if (matches.length === 1) {
+                    const url = matches[0].startsWith('http') ? matches[0] : `https://${matches[0]}`;
+                    window.location.href = url;
+                } else if (matches.length > 1) {
+                    message.textContent = `${matches.length}件ヒットしました。`;
+                } else {
+                    message.textContent = '該当するブックマークが見つかりません。';
+                }
+            };
+
+            // サジェスチョンを表示
+            const showSuggestions = () => {
+                const query = input.value.trim();
+                if (!query) {
+                    suggestions.style.display = 'none';
+                    return;
+                }
+
+                const matches = defaultBookmarks.filter(bookmark =>
+                    bookmark.toLowerCase().includes(query.toLowerCase())
+                );
+
+                if (matches.length > 0) {
+                    suggestions.innerHTML = '';
+                    matches.forEach(match => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = match;
+                        div.addEventListener('click', () => {
+                            input.value = match;
+                            suggestions.style.display = 'none';
+                        });
+                        suggestions.appendChild(div);
+                    });
+                    suggestions.style.display = 'block';
+
+                    // 部分一致が1件になったらすぐに遷移
+                    if (matches.length === 1) {
+                        const url = matches[0].startsWith('http') ? matches[0] : `https://${matches[0]}`;
+                        window.location.href = url;
+                    }
+                } else {
+                    suggestions.style.display = 'none';
+                }
+            };
+
+            // Enterキーを押したときの挙動
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    if (input.value.trim().length > 0) {
+                        addBookmark();
+                    } else {
+                        searchAndNavigate();
+                    }
+                }
+            });
+
+            // 入力中にサジェスチョンを表示
+            input.addEventListener('input', showSuggestions);
+
+            // ページ外をクリックした際にサジェスチョンを非表示
+            document.addEventListener('click', function (e) {
+                if (e.target !== input) {
+                    suggestions.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -83,7 +83,7 @@
             // urls.txtからURLリストを読み込む
             let defaultBookmarks = [];
 
-            fetch('urls.txt')
+            fetch('https://raw.githubusercontent.com/gojiroma/bookmarks/refs/heads/main/urls.txt')
                 .then(response => response.text())
                 .then(text => {
                     // 改行区切りでURLを分割

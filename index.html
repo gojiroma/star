@@ -281,18 +281,31 @@
                 });
             }
 
+            // 指定日の遷移先URLを読み込む
+            function loadRedirectedUrls() {
+                const urlCounts = {};
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('redirectedUrls-')) {
+                        const urls = JSON.parse(localStorage.getItem(key) || '[]');
+                        urls.forEach(url => {
+                            urlCounts[url] = (urlCounts[url] || 0) + 1;
+                        });
+                    }
+                });
+                return urlCounts;
+            }
+
+            // 今日の遷移先URLを保存
+            function recordRedirectedUrl(url) {
+                const today = new Date().toISOString().split('T')[0];
+                const urls = JSON.parse(localStorage.getItem(`redirectedUrls-${today}`) || '[]');
+                urls.push(url);
+                localStorage.setItem(`redirectedUrls-${today}`, JSON.stringify(urls));
+            }
+
             // トップURLを表示
             function updateTopUrls() {
-                const counts = loadRedirectCounts();
-                const allUrls = Object.values(counts).flatMap((_, index) => {
-                    const date = Object.keys(counts)[index];
-                    return JSON.parse(localStorage.getItem(`urls-${date}`) || '[]');
-                });
-
-                const urlCounts = {};
-                allUrls.forEach(url => {
-                    urlCounts[url] = (urlCounts[url] || 0) + 1;
-                });
+                const urlCounts = loadRedirectedUrls();
 
                 const sortedUrls = Object.entries(urlCounts)
                     .sort((a, b) => b[1] - a[1])
@@ -306,7 +319,14 @@
                     div.textContent = `${index + 1}: ${url}`;
                     div.dataset.url = url;
                     div.addEventListener('click', () => {
-                        window.location.href = normalizeUrl(url);
+                        const normalized = normalizeUrl(url);
+                        recordRedirectedUrl(normalized);
+                        try {
+                            updateRedirectCount(normalized);
+                        } catch (error) {
+                            console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                        }
+                        window.location.href = normalized;
                     });
                     topUrls.appendChild(div);
                 });
@@ -322,7 +342,14 @@
                     div.textContent = `${String.fromCharCode(97 + index)}: ${url}`;
                     div.dataset.url = url;
                     div.addEventListener('click', () => {
-                        window.location.href = normalizeUrl(url);
+                        const normalized = normalizeUrl(url);
+                        recordRedirectedUrl(normalized);
+                        try {
+                            updateRedirectCount(normalized);
+                        } catch (error) {
+                            console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                        }
+                        window.location.href = normalized;
                     });
                     lastUrls.appendChild(div);
                 });
@@ -359,6 +386,31 @@
                 window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=1`;
             }
 
+            function sortMatches(matches) {
+                return matches.slice().sort((a, b) =>
+                    a.length - b.length || a.localeCompare(b, undefined, { sensitivity: 'base' })
+                );
+            }
+
+            function getTopSuggestionUrl() {
+                const suggestionItems = suggestions.querySelectorAll('.suggestion-item');
+                if (suggestionItems.length > 0 && suggestions.style.display === 'block') {
+                    return normalizeUrl(suggestionItems[0].textContent);
+                }
+                return null;
+            }
+
+            function getTopMatch(query) {
+                const visibleUrl = getTopSuggestionUrl();
+                if (visibleUrl) {
+                    return visibleUrl;
+                }
+                const matches = sortMatches(defaultBookmarks.filter(bookmark =>
+                    bookmark.toLowerCase().includes(query.toLowerCase())
+                ));
+                return matches.length >= 1 ? normalizeUrl(matches[0]) : null;
+            }
+
             // 部分一致で検索し、一番上の結果で遷移
             const searchAndNavigate = () => {
                 const query = input.value.trim();
@@ -369,12 +421,9 @@
                 urlsToday.push(query);
                 localStorage.setItem(`urls-${today}`, JSON.stringify(urlsToday));
 
-                const matches = defaultBookmarks.filter(bookmark =>
-                    bookmark.toLowerCase().includes(query.toLowerCase())
-                );
-
-                if (matches.length >= 1) {
-                    const url = normalizeUrl(matches[0]);
+                const url = getTopMatch(query);
+                if (url) {
+                    recordRedirectedUrl(url);
                     try {
                         updateRedirectCount(url);
                     } catch (error) {
@@ -405,9 +454,9 @@
 
                 if (matches.length > 0) {
                     // 文字列が短いものを優先して表示
-                    matches.sort((a, b) => a.length - b.length || a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                    const sorted = sortMatches(matches);
                     suggestions.innerHTML = '';
-                    matches.forEach((match, index) => {
+                    sorted.forEach((match, index) => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
                         div.textContent = match;
@@ -426,7 +475,7 @@
 
             // 入力が落ち着いたら自動で検索・遷移
             let typingTimer;
-            const doneTypingInterval  = 800; // 800ms
+            const doneTypingInterval = 800; // 800ms
             let selectedIndex = -1;
             let lastKeyTime = 0;
             let keyPressed = false;
@@ -445,12 +494,24 @@
                             const index = parseInt(query) - 1;
                             if (topUrlsList[index]) {
                                 const url = normalizeUrl(topUrlsList[index].dataset.url);
+                                recordRedirectedUrl(url);
+                                try {
+                                    updateRedirectCount(url);
+                                } catch (error) {
+                                    console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                                }
                                 window.location.href = url;
                             }
                         } else if (/^[a-j]$/.test(query)) {
                             const index = query.charCodeAt(0) - 97;
                             if (lastUrlsList[index]) {
                                 const url = normalizeUrl(lastUrlsList[index].dataset.url);
+                                recordRedirectedUrl(url);
+                                try {
+                                    updateRedirectCount(url);
+                                } catch (error) {
+                                    console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                                }
                                 window.location.href = url;
                             }
                         }
@@ -498,7 +559,12 @@
                         input.value = selectedUrl;
                         suggestions.style.display = 'none';
                         const url = selectedUrl.startsWith('http') ? selectedUrl : `https://${selectedUrl}`;
-                        updateRedirectCount(url);
+                        recordRedirectedUrl(url);
+                        try {
+                            updateRedirectCount(url);
+                        } catch (error) {
+                            console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                        }
                         window.location.href = url;
                     }
                 }

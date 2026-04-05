@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>決まり字ブックマーク</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         ::-webkit-scrollbar {
             display: none;
@@ -25,6 +26,8 @@
         .container {
             text-align: center;
             position: relative;
+            width: 100%;
+            max-width: 800px;
         }
 
         input {
@@ -55,7 +58,8 @@
             cursor: pointer;
         }
 
-        .suggestion-item:hover {
+        .suggestion-item:hover,
+        .suggestion-item.selected {
             background-color: #f0f0f0;
         }
 
@@ -63,14 +67,76 @@
             margin-top: 10px;
             color: #666;
         }
+
+        .top-urls,
+        .last-urls {
+            position: fixed;
+            width: 450px;
+            height: 200px;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+
+        .top-urls {
+            top: 10px;
+            left: calc(50% - 500px);
+        }
+
+        .last-urls {
+            top: 10px;
+            right: calc(50% - 500px);
+        }
+
+        .url-item {
+            padding: 5px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .url-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .chart-container {
+            margin: 20px auto;
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+        }
+
+        @media (max-width: 768px) {
+
+            .top-urls,
+            .last-urls {
+                position: relative;
+                width: 100%;
+                max-width: 400px;
+                margin: 10px auto;
+                top: auto;
+                left: auto;
+                right: auto;
+            }
+
+            .top-urls {
+                margin-bottom: 20px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
+        <div class="top-urls" id="topUrls"></div>
+        <div class="last-urls" id="lastUrls"></div>
+        <p class="message" id="message"></p>
         <input type="text" id="bookmarkInput" placeholder="URLまたはキーワードを入力" autocomplete="off">
         <div class="suggestions" id="suggestions"></div>
-        <p class="message" id="message"></p>
+        <div class="chart-container">
+            <canvas id="redirectChart"></canvas>
+        </div>
     </div>
 
     <script>
@@ -78,6 +144,9 @@
             const input = document.getElementById('bookmarkInput');
             const suggestions = document.getElementById('suggestions');
             const message = document.getElementById('message');
+            const topUrls = document.getElementById('topUrls');
+            const lastUrls = document.getElementById('lastUrls');
+            const ctx = document.getElementById('redirectChart').getContext('2d');
 
             // パーセントデコード関数
             function decodePercentEncoding(str) {
@@ -97,6 +166,23 @@
             // LocalStorageにブックマークを保存
             function saveBookmarksToLocalStorage(bookmarks) {
                 localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+            }
+
+            // リダイレクト回数をLocalStorageから読み込む
+            function loadRedirectCounts() {
+                const storedCounts = localStorage.getItem('redirectCounts');
+                if (!storedCounts) return {};
+                try {
+                    return JSON.parse(storedCounts);
+                } catch (error) {
+                    console.warn('redirectCounts の読み込みに失敗しました。破損したデータを初期化します。', error);
+                    return {};
+                }
+            }
+
+            // リダイレクト回数をLocalStorageに保存
+            function saveRedirectCounts(counts) {
+                localStorage.setItem('redirectCounts', JSON.stringify(counts));
             }
 
             // 最新コミットのハッシュを取得
@@ -145,7 +231,7 @@
                 const fetchedBookmarks = await fetchUrlsFromLatestCommit();
                 if (fetchedBookmarks.length > 0) {
                     // 重複を解消して更新
-                    defaultBookmarks = [...new Set([...fetchedBookmarks])];
+                    defaultBookmarks = [...new Set([...fetchedBookmarks, ...defaultBookmarks])];
                     saveBookmarksToLocalStorage(defaultBookmarks);
                     message.textContent = `${defaultBookmarks.length}件のブックマークを更新しました。`;
                 } else {
@@ -153,8 +239,100 @@
                 }
             }
 
+            // リダイレクト回数を更新
+            function updateRedirectCount(url) {
+                const today = new Date().toISOString().split('T')[0];
+                const counts = loadRedirectCounts();
+                counts[today] = counts[today] || 0;
+                counts[today]++;
+                saveRedirectCounts(counts);
+                try {
+                    updateChart();
+                } catch (error) {
+                    console.warn('チャートの更新に失敗しました。', error);
+                }
+            }
+
+            // チャートを更新
+            function updateChart() {
+                const counts = loadRedirectCounts();
+                const labels = Object.keys(counts).sort();
+                const data = labels.map(label => counts[label]);
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'リダイレクト回数',
+                            data: data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // トップURLを表示
+            function updateTopUrls() {
+                const counts = loadRedirectCounts();
+                const allUrls = Object.values(counts).flatMap((_, index) => {
+                    const date = Object.keys(counts)[index];
+                    return JSON.parse(localStorage.getItem(`urls-${date}`) || '[]');
+                });
+
+                const urlCounts = {};
+                allUrls.forEach(url => {
+                    urlCounts[url] = (urlCounts[url] || 0) + 1;
+                });
+
+                const sortedUrls = Object.entries(urlCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 9)
+                    .map(entry => entry[0]);
+
+                topUrls.innerHTML = '';
+                sortedUrls.forEach((url, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'url-item';
+                    div.textContent = `${index + 1}: ${url}`;
+                    div.dataset.url = url;
+                    div.addEventListener('click', () => {
+                        window.location.href = normalizeUrl(url);
+                    });
+                    topUrls.appendChild(div);
+                });
+            }
+
+            // 最後の10行を逆順で表示
+            function updateLastUrls() {
+                const lastTen = [...defaultBookmarks].slice(-10).reverse();
+                lastUrls.innerHTML = '';
+                lastTen.forEach((url, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'url-item';
+                    div.textContent = `${String.fromCharCode(97 + index)}: ${url}`;
+                    div.dataset.url = url;
+                    div.addEventListener('click', () => {
+                        window.location.href = normalizeUrl(url);
+                    });
+                    lastUrls.appendChild(div);
+                });
+            }
+
             // ページロード時にGitHubから最新データを取得
             await updateBookmarksFromGitHub();
+            updateChart();
+            updateTopUrls();
+            updateLastUrls();
 
             // 入力内容を追加する
             const addBookmark = () => {
@@ -170,25 +348,46 @@
                 saveBookmarksToLocalStorage(defaultBookmarks);
                 input.value = '';
                 message.textContent = 'ブックマークを追加しました。';
+                updateLastUrls();
             };
 
-            // 部分一致で検索し、1件だけに絞れたらそのURLに移動
+            function normalizeUrl(url) {
+                return url.startsWith('http') ? url : `https://${url}`;
+            }
+
+            function navigateToLuckySearch(query) {
+                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=1`;
+            }
+
+            // 部分一致で検索し、一番上の結果で遷移
             const searchAndNavigate = () => {
                 const query = input.value.trim();
                 if (!query) return;
+
+                const today = new Date().toISOString().split('T')[0];
+                const urlsToday = JSON.parse(localStorage.getItem(`urls-${today}`) || '[]');
+                urlsToday.push(query);
+                localStorage.setItem(`urls-${today}`, JSON.stringify(urlsToday));
 
                 const matches = defaultBookmarks.filter(bookmark =>
                     bookmark.toLowerCase().includes(query.toLowerCase())
                 );
 
-                if (matches.length === 1) {
-                    const url = matches[0].startsWith('http') ? matches[0] : `https://${matches[0]}`;
+                if (matches.length >= 1) {
+                    const url = normalizeUrl(matches[0]);
+                    try {
+                        updateRedirectCount(url);
+                    } catch (error) {
+                        console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                    }
                     window.location.href = url;
-                } else if (matches.length > 1) {
-                    message.textContent = `${matches.length}件ヒットしました。`;
                 } else {
-                    // 該当なしの場合、GoogleのI'm Feeling Luckyに遷移
-                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I'm+Feeling+Lucky`;
+                    try {
+                        updateRedirectCount(query);
+                    } catch (error) {
+                        console.warn('リダイレクトカウント更新時にエラーが発生しました。', error);
+                    }
+                    navigateToLuckySearch(query);
                 }
             };
 
@@ -206,10 +405,11 @@
 
                 if (matches.length > 0) {
                     suggestions.innerHTML = '';
-                    matches.forEach(match => {
+                    matches.forEach((match, index) => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
                         div.textContent = match;
+                        div.dataset.index = index;
                         div.addEventListener('click', () => {
                             input.value = match;
                             suggestions.style.display = 'none';
@@ -224,33 +424,80 @@
 
             // 入力が落ち着いたら自動で検索・遷移
             let typingTimer;
-            const doneTypingInterval = 1000; // 1秒
-
+            const doneTypingInterval = 500; // 500ms
+            let selectedIndex = -1;
+            let lastKeyTime = 0;
+            let keyPressed = false;
             input.addEventListener('input', () => {
                 showSuggestions();
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
                     const query = input.value.trim();
-                    if (query) {
-                        const matches = defaultBookmarks.filter(bookmark =>
-                            bookmark.toLowerCase().includes(query.toLowerCase())
-                        );
+                    if (!query) return;
 
-                        if (matches.length === 1) {
-                            const url = matches[0].startsWith('http') ? matches[0] : `https://${matches[0]}`;
-                            window.location.href = url;
-                        } else if (matches.length === 0) {
-                            window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I'm+Feeling+Lucky`;
+                    if (query.length === 1 && /^[1-9a-j]$/.test(query)) {
+                        // 1文字でa~jまたは1~9の場合、トップURLまたは最後のURLから遷移
+                        const topUrlsList = topUrls.querySelectorAll('.url-item');
+                        const lastUrlsList = lastUrls.querySelectorAll('.url-item');
+                        if (/^[1-9]$/.test(query)) {
+                            const index = parseInt(query) - 1;
+                            if (topUrlsList[index]) {
+                                const url = normalizeUrl(topUrlsList[index].dataset.url);
+                                window.location.href = url;
+                            }
+                        } else if (/^[a-j]$/.test(query)) {
+                            const index = query.charCodeAt(0) - 97;
+                            if (lastUrlsList[index]) {
+                                const url = normalizeUrl(lastUrlsList[index].dataset.url);
+                                window.location.href = url;
+                            }
                         }
+                    } else {
+                        searchAndNavigate();
                     }
                 }, doneTypingInterval);
             });
-
-            // Enterキーを押したときの挙動
+            // キーボード操作でサジェスチョンを選択
             input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    if (input.value.trim().length > 0) {
-                        searchAndNavigate();
+                const suggestionItems = suggestions.querySelectorAll('.suggestion-item');
+                if (suggestionItems.length > 0 && suggestions.style.display === 'block') {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = (selectedIndex + 1) % suggestionItems.length;
+                        suggestionItems.forEach((item, index) => {
+                            if (index === selectedIndex) {
+                                item.classList.add('selected');
+                            } else {
+                                item.classList.remove('selected');
+                            }
+                        });
+                        lastKeyTime = Date.now();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = (selectedIndex - 1 + suggestionItems.length) % suggestionItems.length;
+                        suggestionItems.forEach((item, index) => {
+                            if (index === selectedIndex) {
+                                item.classList.add('selected');
+                            } else {
+                                item.classList.remove('selected');
+                            }
+                        });
+                        lastKeyTime = Date.now();
+                    }
+                }
+            });
+
+            // キー操作が落ち着いたら選択中のサジェスチョンに遷移
+            input.addEventListener('keyup', function (e) {
+                const suggestionItems = suggestions.querySelectorAll('.suggestion-item');
+                if (suggestionItems.length > 0 && suggestions.style.display === 'block' && selectedIndex >= 0) {
+                    if (Date.now() - lastKeyTime > 300) {
+                        const selectedUrl = suggestionItems[selectedIndex].textContent;
+                        input.value = selectedUrl;
+                        suggestions.style.display = 'none';
+                        const url = selectedUrl.startsWith('http') ? selectedUrl : `https://${selectedUrl}`;
+                        updateRedirectCount(url);
+                        window.location.href = url;
                     }
                 }
             });
@@ -267,4 +514,5 @@
         });
     </script>
 </body>
+
 </html>

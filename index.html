@@ -426,7 +426,7 @@
 
             // 入力が落ち着いたら自動で検索・遷移
             let typingTimer;
-            const doneTypingInterval = 500; // 500ms
+            const doneTypingInterval increase interval = 800; // 800ms
             let selectedIndex = -1;
             let lastKeyTime = 0;
             let keyPressed = false;
@@ -493,7 +493,7 @@
             input.addEventListener('keyup', function (e) {
                 const suggestionItems = suggestions.querySelectorAll('.suggestion-item');
                 if (suggestionItems.length > 0 && suggestions.style.display === 'block' && selectedIndex >= 0) {
-                    if (Date.now() - lastKeyTime > 300) {
+                    if (Date.now() - lastKeyTime > 800) {
                         const selectedUrl = suggestionItems[selectedIndex].textContent;
                         input.value = selectedUrl;
                         suggestions.style.display = 'none';

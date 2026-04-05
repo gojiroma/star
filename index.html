@@ -404,6 +404,8 @@
                 );
 
                 if (matches.length > 0) {
+                    // 文字列が短いものを優先して表示
+                    matches.sort((a, b) => a.length - b.length || a.localeCompare(b, undefined, { sensitivity: 'base' }));
                     suggestions.innerHTML = '';
                     matches.forEach((match, index) => {
                         const div = document.createElement('div');
